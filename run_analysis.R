@@ -15,13 +15,14 @@ FilePath <- paste0(getwd(), "/UCI HAR Dataset")
 
 #reading required files & preparing for merge
 library(data.table)
+library(dplyr)
 
 #storing activity labels and features
 ActivityLabels <-read.table(paste0(FilePath,"/activity_labels.txt"))[,2] #Extracting second column
 Features <-read.table(paste0(FilePath,"/features.txt"))[,2]
 
 #Preparing Test File
-TestSubjects <-read.table(paste0(FilePath,"/test/y_test.txt"))
+TestSubjects <-read.table(paste0(FilePath,"/test/subject_test.txt"))
 names(TestSubjects) <- "Subjects"
 
 TestData <-read.table(paste0(FilePath,"/test/X_test.txt"))
@@ -35,7 +36,7 @@ DfTest <- cbind(TestSubjects, TestData, Activity) #Test Data frame ready to merg
 
 #Prearing Train File
 
-TrainSubjects <-read.table(paste0(FilePath,"/train/y_train.txt"))
+TrainSubjects <-read.table(paste0(FilePath,"/train/subject_train.txt"))
 names(TrainSubjects) <- "Subjects"
 
 TrainData <-read.table(paste0(FilePath,"/train/X_train.txt"))
@@ -51,8 +52,12 @@ DfBoth <- rbind(DfTrain, DfTest) #Merging both the data frames row-wise
 
 # Q 2 Extracts only the measurements on the mean and standard deviation for each measurement.
 
-indices <- grep("mean|std", names(DfBoth)) # Indices will have column numbers of Columns containing string "means or std in their names
-DfBoth_MeanStd <- DfBoth[,indices] #Subsetting DfBoth on columns stored in Indices
+ # indices <- grep("mean|std", names(DfBoth)) # Indices will have column numbers of Columns containing string "means or std in their names
+indices <- grep ("mean\\(\\)|std\\(\\)", names(DfBoth)) #Indices will have column numbers of Columns containing string "means or std in their names
+
+
+# Subsetting Data to contain only columns subjects(column 1), Activity (last Column) and  intermediate Columns matching criteria
+DfBoth <- DfBoth[,c(1, indices, ncol(DfBoth))] 
 
 # Q 3 Uses descriptive activity names to name the activities in the data set
 
@@ -83,7 +88,7 @@ names(DfBoth)<-gsub("std()", "SD", names(DfBoth))
 
 
 #question 5 :tidy data set with the average of each variable for each activity and each subject
-tidydata<-aggregate(DfBoth, by=list(DfBoth$Activity, DfBoth$Subjects), mean)
-write.table(tidydata, "TidyData.txt", row.name=FALSE)
+tidydata<-DfBoth %>% group_by(Subjects, Activity) %>% summarise_all(mean)
+write.table(tidydata, "TidyData.txt", row.names = FALSE)
 
 
